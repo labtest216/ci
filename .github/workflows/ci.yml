@@ -3,11 +3,11 @@ name: "health-check: Build Tag Push"
 on:
   push:
     branches:
-      #- main
-    paths:
+      - main
+    #paths:
       #- public/**
       #- source/**
-      - ci-test
+      #- ci-test
 
 env:
   REPO_TYPE: hub                                                  # ecr or hub
