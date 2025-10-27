@@ -2,7 +2,7 @@
 set -e
 set x
 
-GITHUB_TOKEN=AK2LPPWLTWR6RBML6SJ6FT3I7PATA
+GITHUB_TOKEN=$1
 GITHUB_URL=https://github.com/labtest216/ci
 RUNNER_VERSION="2.329.0"
 RUNNER_URL="https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/"
