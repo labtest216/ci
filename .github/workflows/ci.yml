@@ -53,7 +53,7 @@ jobs:
         push: false
         tags: |
           ${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:latest
-          ${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${{ github.ref }}-${{ github.run_number }}
+          ${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ github.run_number }}
         cache-from: type=gha
         platforms: linux/amd64,linux/arm64
         #build-args: |
@@ -92,7 +92,7 @@ jobs:
         push: true
         tags: |
           ${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:latest
-          ${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${{ github.run_number }}
+          ${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ github.run_number }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
@@ -112,7 +112,7 @@ jobs:
         push: true
         tags: |
           ${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:latest
-          ${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${{ github.ref }}-${{ github.run_number }}
+          ${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ github.run_number }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
     
