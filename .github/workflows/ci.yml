@@ -48,22 +48,20 @@ jobs:
     - name: Build image
       uses: docker/build-push-action@v5
       with:
-        context: ./${{ env.DOCKER_FILE_NAME }}
+        file: ${{ env.DOCKER_FILE_NAME }}
+        context: .
         push: false
-        tags: ${{ steps.meta.outputs.tags }}
+        tags: |
+          ${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:latest
+          ${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${{ github.ref }}-${{ github.run_number }}
         cache-from: type=gha
-          
-    # - name: Build image
-    #   uses: docker/build-push-action@v4
-    #   with:
-    #     context: ./${{ env.IMAGE_NAME }}
-    #     push: false
-    #     tags: |
-    #       ${{ env.REPO_NAME }}${{ env.IMAGE_NAME }}:latest
-    #       ${{ env.REPO_NAME }}${{ env.IMAGE_NAME }}:${{ github.ref }}-${{ github.run_number }}
-    #     cache-from: type=gha
-    #     cache-to: type=gha,mode=max
-    #     outputs: type=docker,dest=/tmp/image.tar
+        platforms: linux/amd64,linux/arm64
+        #build-args: |
+        #  ARG1=value1
+        #  ARG2=value2
+        #secrets: | 
+        #  MY_SECRET1=${{ secrets.MY_SECRET1 }}
+        #  MY_SECRET2=${{ secrets.MY_SECRET2 }}
 
     - name: Scan image
       if: env.IMAGE_SCAN == 'true'
