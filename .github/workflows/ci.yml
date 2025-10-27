@@ -41,8 +41,8 @@ jobs:
         context: ./${{ env.IMAGE_NAME }}
         push: false
         tags: |
-          ${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:latest
-          ${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${{ github.ref }}-${{ github.run_number }}
+          ${{ env.REPO_NAME }}${{ env.IMAGE_NAME }}:latest
+          ${{ env.REPO_NAME }}${{ env.IMAGE_NAME }}:${{ github.ref }}-${{ github.run_number }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
         outputs: type=docker,dest=/tmp/image.tar
