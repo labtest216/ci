@@ -16,7 +16,7 @@ env:
   AWS_ROLE_ARN: arn:aws:iam::123456789012:role/GitHubActionsRole  # AWS Role ARN 
   IMAGE_NAME: ${{ github.event.repository.name }}                 # frontend, backend ai.
   IMAGE_SCAN: 'true'
-  DOCKER_FILE_NAME: Dockerfile
+  DOCKER_FILE_NAME: Dockerfie
   TELEG_SEND: 'true'
   SLACK_SEND: 'true'                                               # Enable image scanning
 
