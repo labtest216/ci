@@ -11,11 +11,12 @@ on:
 
 env:
   REPO_TYPE: hub                                                  # ecr or hub
-  REPO_NAME:
+  REPO_NAME: fpos
   AWS_REGION: us-east-1                                           # AWS region
   AWS_ROLE_ARN: arn:aws:iam::123456789012:role/GitHubActionsRole  # AWS Role ARN 
   IMAGE_NAME: ${{ github.event.repository.name }}                 # frontend, backend ai.
   IMAGE_SCAN: 'true'
+  DOCKER_FILE_NAME: Dockerfile
   TELEG_SEND: 'true'
   SLACK_SEND: 'true'                                               # Enable image scanning
 
@@ -47,7 +48,7 @@ jobs:
     - name: Build image
       uses: docker/build-push-action@v5
       with:
-        context: ./${{ env.IMAGE_NAME }}
+        context: ./${{ env.DOCKER_FILE_NAME }}
         push: false
         tags: ${{ steps.meta.outputs.tags }}
         cache-from: type=gha
