@@ -10,16 +10,19 @@ on:
       #- ci-test
 
 env:
-  REPO_TYPE: hub                                                  # ecr or hub
+  REPO_TYPE: hub                                                  
   REPO_NAME: fpos
-  AWS_REGION: us-east-1                                           # AWS region
-  AWS_ROLE_ARN: arn:aws:iam::123456789012:role/GitHubActionsRole  # AWS Role ARN 
+  AWS_REGION: us-east-1                                           
+  AWS_ROLE_ARN: arn:aws:iam::123456789012:role/GitHubActionsRole 
   IMAGE_NAME: ${{ github.event.repository.name }}                 # frontend, backend ai.
-  IMAGE_SCAN: 'true'
+  SCAN_ENABLE: 'true'
+  SCAN_FORMAT: table
+  SCAN_TYPE: 'os,library'
+  SCAN_SEVR: 'CRITICAL,HIGH'
   DOCKER_FILE_NAME: Dockerfie
+  DOCKER_CONTEXT: .
   TELEG_SEND: 'true'
-  SLACK_SEND: 'true'                                               # Enable image scanning
-
+  
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
@@ -45,21 +48,20 @@ jobs:
           type=raw,value=latest
           type=raw,value=${{ github.ref_name }}
           
-    - name: Build image
+    ####################################
+    # Build and scan local linux/amd64
+    ###################################    
+    - name: Build image linux/amd64
+      if: env.SCAN_ENABLE == 'true'
       uses: docker/build-push-action@v5
       with:
-        file: ${{ env.DOCKER_FILE_NAME }}
-        context: .
         push: false
         load: true
-        #outputs: type=docker, name=${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:latest
-        tags: ${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:latest
-        #tags: |
-        #  ${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:latest
-        #  ${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ github.run_number }}
         cache-from: type=gha
-        #platforms: linux/amd64,linux/arm64
         platforms: linux/amd64
+        file: ${{ env.DOCKER_FILE_NAME }}
+        context: ${{ env.DOCKER_CONTEXT }}
+        tags: ${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:latest
         #build-args: |
         #  ARG1=value1
         #  ARG2=value2
@@ -67,19 +69,56 @@ jobs:
         #  MY_SECRET1=${{ secrets.MY_SECRET1 }}
         #  MY_SECRET2=${{ secrets.MY_SECRET2 }}
 
-    - name: Scan image
-      if: env.IMAGE_SCAN == 'true'
+    - name: Scan image linux/amd64
+      if: env.SCAN_ENABLE == 'true'
       uses: aquasecurity/trivy-action@0.24.0
       with:
+        exit-code: '1'                       
+        ignore-unfixed: true                
+        cache-dir: /tmp/trivy-cache          
+        skip-dirs: /tmp
+        vuln-type: ${{ env.SCAN_TYPE }}          
+        severity: ${{ env.SCAN_SEVR }}
+        format: ${{ env.SCAN_FORMAT }}
         image-ref: ${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:latest
-        format: table
-        exit-code: '1'                       # Fail on severity
-        ignore-unfixed: true                 # Ignore unfixable vulnerabilities
-        vuln-type: 'os,library'              # Scan OS and library vulnerabilities
-        severity: 'CRITICAL,HIGH'            # Fail on critical or high severity
-        cache-dir: /tmp/trivy-cache          # Cache Trivy database
-        skip-dirs: /tmp                      # Skip scanning temp directories
 
+    ####################################
+    # Build and scan local linux/arm64
+    ###################################    
+    - name: Build image linux/arm64
+      if: env.SCAN_ENABLE == 'true'
+      uses: docker/build-push-action@v5
+      with:
+        push: false
+        load: true
+        cache-from: type=gha
+        platforms: linux/arm64
+        file: ${{ env.DOCKER_FILE_NAME }}
+        context: ${{ env.DOCKER_CONTEXT }}
+        tags: ${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:latest
+        #build-args: |
+        #  ARG1=value1
+        #  ARG2=value2
+        #secrets: | 
+        #  MY_SECRET1=${{ secrets.MY_SECRET1 }}
+        #  MY_SECRET2=${{ secrets.MY_SECRET2 }}
+
+    - name: Scan image linux/arm64
+      if: env.SCAN_ENABLE == 'true'
+      uses: aquasecurity/trivy-action@0.24.0
+      with:
+        exit-code: '1'                       
+        ignore-unfixed: true                
+        cache-dir: /tmp/trivy-cache          
+        skip-dirs: /tmp
+        vuln-type: ${{ env.SCAN_TYPE }}          
+        severity: ${{ env.SCAN_SEVR }}
+        format: ${{ env.SCAN_FORMAT }}
+        image-ref: ${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:latest
+
+    ##############################################
+    # Login to docker repos
+    ##############################################    
     - name: Login to aws ecr
       if: env.IMAGE_REPO_TYPE == 'ecr'
       uses: aws-actions/configure-aws-credentials@v4
@@ -88,38 +127,37 @@ jobs:
         aws-region: ${{ env.AWS_REGION }} 
         role-session-name: GitHubActionsSession
 
-    - name: Push to aws ecr
-      if: env.REPO_TYPE == 'ecr'
-      uses: docker/build-push-action@v4
-      with:
-        context: ./${{ env.IMAGE_NAME }}
-        push: true
-        tags: |
-          ${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:latest
-          ${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ github.run_number }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-
-
     - name: Log in to docker hub
       if: env.REPO_TYPE == 'hub'
       uses: docker/login-action@v2
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
-
-    - name: Push to docker hub
-      if: env.REPO_TYPE == 'hub'
-      uses: docker/build-push-action@v4
+        
+    ##############################################
+    # Build and push image linux/arm64 linux/arm64
+    ##############################################    
+    - name: Build and push image linux/arm64 linux/arm64
+      uses: docker/build-push-action@v5
       with:
-        context: ./${{ env.IMAGE_NAME }}
         push: true
+        cache-from: type=gha
+        platforms: linux/amd64,linux/arm64
+        file: ${{ env.DOCKER_FILE_NAME }}
+        context: ${{ env.DOCKER_CONTEXT }}
         tags: |
           ${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:latest
           ${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ github.run_number }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+        #build-args: |
+        #  ARG1=value1
+        #  ARG2=value2
+        #secrets: | 
+        #  MY_SECRET1=${{ secrets.MY_SECRET1 }}
+        #  MY_SECRET2=${{ secrets.MY_SECRET2 }}
     
+    ##############################################
+    # Send report
+    ############################################## 
     - name: Send to telegram
       if: env.TELEG_SEND == 'hub'
       uses: appleboy/telegram-action@master
