@@ -51,7 +51,7 @@ jobs:
         file: ${{ env.DOCKER_FILE_NAME }}
         context: .
         push: false
-        outputs: type=docker, name=${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:latest
+        #outputs: type=docker, name=${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:latest
         tags: |
           ${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:latest
           ${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ github.run_number }}
