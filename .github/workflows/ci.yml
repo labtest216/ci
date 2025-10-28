@@ -36,10 +36,8 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v3
 
-    - name: Set up Buildx
-      uses: docker/setup-buildx-action@v3
-      with:
-        install: true
+    - name: Set buildx X86/ARM
+      uses: docker/setup-buildx-action@v2
       
     #- name: Set up QEMU
     #  uses: docker/setup-qemu-action@v3
