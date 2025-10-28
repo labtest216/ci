@@ -20,7 +20,7 @@ env:
   SCAN_TYPE: 'os,library'
   SCAN_SEVR: 'CRITICAL,HIGH'
   DOCKER_FILE_NAME: Dockerfie
-  DOCKER_CONTEXT: .
+  DOCKER_CO: .
   TELEG_SEND: 'true'
   
 jobs:
