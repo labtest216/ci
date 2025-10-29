@@ -10,7 +10,7 @@ on:
       #- ci-test
 
 env:
-  : ${{ github.event.repository.name }}                 # frontend, backend ai.
+  IMAGE_NAME: ${{ github.event.repository.name }}                 # frontend, backend ai.
   
   
 jobs:
