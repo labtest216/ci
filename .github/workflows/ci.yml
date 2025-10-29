@@ -12,7 +12,7 @@ on:
 env:
   REPO_TYPE: hub                                                  
   REPO_NAME: fpos
-  AWS_REGION: us-east-1                                           
+  AWS_REGION: ${{ vars.AWS_REGION }}                                           
   AWS_ROLE_ARN: arn:aws:iam::123456789012:role/GitHubActionsRole 
   IMAGE_NAME: ${{ github.event.repository.name }}                 # frontend, backend ai.
   SCAN_ENABLE: 'true'
