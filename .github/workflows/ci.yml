@@ -10,18 +10,8 @@ on:
       #- ci-test
 
 env:
-  REPO_TYPE: hub                                                  
-  REPO_NAME: fpos
-  AWS_REGION: ${{ vars.AWS_REGION }}                                           
-  AWS_ROLE_ARN: arn:aws:iam::123456789012:role/GitHubActionsRole 
-  IMAGE_NAME: ${{ github.event.repository.name }}                 # frontend, backend ai.
-  SCAN_ENABLE: 'true'
-  SCAN_FORMAT: table
-  SCAN_TYPE: 'os,library'
-  SCAN_SEVR: 'CRITICAL,HIGH'
-  DOCKER_FILE: Dockerfie
-  DOCKER_CONT: .
-  TELEG_SEND: 'true'
+  : ${{ github.event.repository.name }}                 # frontend, backend ai.
+  
   
 jobs:
   build-and-push:
@@ -42,17 +32,17 @@ jobs:
     ####################################
     # Build and scan local linux/amd64
     ###################################    
-    - name: Build image linux/amd64
-      if: env.SCAN_ENABLE == 'true'
+    - if: env.SCAN_ENABLE == 'true'
+      name: Build image linux/amd64
       uses: docker/build-push-action@v5
       with:
         push: false
         load: true
         cache-from: type=gha
         platforms: linux/amd64
-        file: ${{ env.DOCKER_FILE }}
-        context: ${{ env.DOCKER_CONT }}
-        tags: ${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:latest
+        file: ${{ vars.DOCKER_FILE }}
+        context: ${{ vars.DOCKER_CONT }}
+        tags: ${{ vars.REPO_NAME }}/${{ env.IMAGE_NAME }}:latest
         #build-args: |
         #  ARG1=value1
         #  ARG2=value2
@@ -60,33 +50,33 @@ jobs:
         #  MY_SECRET1=${{ secrets.MY_SECRET1 }}
         #  MY_SECRET2=${{ secrets.MY_SECRET2 }}
 
-    - name: Scan image linux/amd64
-      if: env.SCAN_ENABLE == 'true'
+    - if: env.SCAN_ENABLE == 'true'
+      name: Scan image linux/amd64
       uses: aquasecurity/trivy-action@0.24.0
       with:
         exit-code: '1'                       
         ignore-unfixed: true                
         cache-dir: /tmp/trivy-cache          
         skip-dirs: /tmp
-        vuln-type: ${{ env.SCAN_TYPE }}          
-        severity: ${{ env.SCAN_SEVR }}
-        format: ${{ env.SCAN_FORMAT }}
-        image-ref: ${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:latest
+        vuln-type: ${{ vars.SCAN_TYPE }}          
+        severity: ${{ vars.SCAN_SEVR }}
+        format: ${{ vars.SCAN_FORMAT }}
+        image-ref: ${{ vars.REPO_NAME }}/${{ env.IMAGE_NAME }}:latest
 
     ####################################
     # Build and scan local linux/arm64
     ###################################    
-    - name: Build image linux/arm64
-      if: env.SCAN_ENABLE == 'true'
+    - if: env.SCAN_ENABLE == 'true'
+      name: Build image linux/arm64
       uses: docker/build-push-action@v5
       with:
         push: false
         load: true
         cache-from: type=gha
         platforms: linux/arm64
-        file: ${{ env.DOCKER_FILE }}
-        context: ${{ env.DOCKER_CONT }}
-        tags: ${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:latest
+        file: ${{ vars.DOCKER_FILE }}
+        context: ${{ vars.DOCKER_CONT }}
+        tags: ${{ vars.REPO_NAME }}/${{ env.IMAGE_NAME }}:latest
         #build-args: |
         #  ARG1=value1
         #  ARG2=value2
@@ -94,32 +84,32 @@ jobs:
         #  MY_SECRET1=${{ secrets.MY_SECRET1 }}
         #  MY_SECRET2=${{ secrets.MY_SECRET2 }}
 
-    - name: Scan image linux/arm64
-      if: env.SCAN_ENABLE == 'true'
+    - if: env.SCAN_ENABLE == 'true'
+      name: Scan image linux/arm64
       uses: aquasecurity/trivy-action@0.24.0
       with:
         exit-code: '1'                       
         ignore-unfixed: true                
         cache-dir: /tmp/trivy-cache          
         skip-dirs: /tmp
-        vuln-type: ${{ env.SCAN_TYPE }}          
-        severity: ${{ env.SCAN_SEVR }}
-        format: ${{ env.SCAN_FORMAT }}
-        image-ref: ${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:latest
+        vuln-type: ${{ vars.SCAN_TYPE }}          
+        severity: ${{ vars.SCAN_SEVR }}
+        format: ${{ vars.SCAN_FORMAT }}
+        image-ref: ${{ vars.REPO_NAME }}/${{ env.IMAGE_NAME }}:latest
 
     ##############################################
     # Login to docker repos
     ##############################################    
-    - name: Login to aws ecr
-      if: env.IMAGE_REPO_TYPE == 'ecr'
+    - if: env.IMAGE_REPO_TYPE == 'ecr'
+      name: Login to aws ecr
       uses: aws-actions/configure-aws-credentials@v4
       with:
-        role-to-assume: ${{ env.AWS_ROLE_ARN }} 
-        aws-region: ${{ env.AWS_REGION }} 
+        role-to-assume: ${{ vars.AWS_ROLE_ARN }} 
+        aws-region: ${{ vars.AWS_REGION }} 
         role-session-name: GitHubActionsSession
 
-    - name: Log in to docker hub
-      if: env.REPO_TYPE == 'hub'
+    - if: env.REPO_TYPE == 'hub'
+      name: Log in to docker hub
       uses: docker/login-action@v2
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
@@ -134,11 +124,11 @@ jobs:
         push: true
         cache-from: type=gha
         platforms: linux/amd64,linux/arm64
-        file: ${{ env.DOCKER_FILE }}
-        context: ${{ env.DOCKER_CONT }}
+        file: ${{ vars.DOCKER_FILE }}
+        context: ${{ vars.DOCKER_CONT }}
         tags: |
-          ${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:latest
-          ${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ github.run_number }}
+          ${{ vars.REPO_NAME }}/${{ env.IMAGE_NAME }}:latest
+          ${{ vars.REPO_NAME }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ github.run_number }}
         #build-args: |
         #  ARG1=value1
         #  ARG2=value2
@@ -149,14 +139,14 @@ jobs:
     ##############################################
     # Send report
     ############################################## 
-    - name: Send to telegram
-      if: env.TELEG_SEND == 'hub'
+    - if: env.TELEG_SEND == 'hub'
+      name: Send to telegram
       uses: appleboy/telegram-action@master
       with:
         to: ${{ secrets.TELEGRAM_CHAT_ID_FRONTEND }}
         token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         message: |
           New Docker image pushed:
-          - Repository: ${{ env.REPO_NAME }}
+          - Repository: ${{ vars.REPO_NAME }}
           - Image: ${{ env.IMAGE_NAME }}
-          - Tag: latest
+          - Tag: ${{ vars.REPO_NAME }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ github.run_number }}
