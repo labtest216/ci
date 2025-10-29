@@ -19,8 +19,8 @@ env:
   SCAN_FORMAT: table
   SCAN_TYPE: 'os,library'
   SCAN_SEVR: 'CRITICAL,HIGH'
-  DOCKER_FILE_NAME: Dockerfie
-  DOCKER_CO: .
+  DOCKER_FILE: Dockerfie
+  DOCKER_CONT: .
   TELEG_SEND: 'true'
   
 jobs:
@@ -38,9 +38,6 @@ jobs:
 
     - name: Set buildx X86/ARM
       uses: docker/setup-buildx-action@v2
-      
-    #- name: Set up QEMU
-    #  uses: docker/setup-qemu-action@v3
           
     ####################################
     # Build and scan local linux/amd64
@@ -53,8 +50,8 @@ jobs:
         load: true
         cache-from: type=gha
         platforms: linux/amd64
-        file: ${{ env.DOCKER_FILE_NAME }}
-        context: ${{ env.DOCKER_CONTEXT }}
+        file: ${{ env.DOCKER_FILE }}
+        context: ${{ env.DOCKER_CONT }}
         tags: ${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:latest
         #build-args: |
         #  ARG1=value1
@@ -87,8 +84,8 @@ jobs:
         load: true
         cache-from: type=gha
         platforms: linux/arm64
-        file: ${{ env.DOCKER_FILE_NAME }}
-        context: ${{ env.DOCKER_CONTEXT }}
+        file: ${{ env.DOCKER_FILE }}
+        context: ${{ env.DOCKER_CONT }}
         tags: ${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:latest
         #build-args: |
         #  ARG1=value1
@@ -137,8 +134,8 @@ jobs:
         push: true
         cache-from: type=gha
         platforms: linux/amd64,linux/arm64
-        file: ${{ env.DOCKER_FILE_NAME }}
-        context: ${{ env.DOCKER_CONTEXT }}
+        file: ${{ env.DOCKER_FILE }}
+        context: ${{ env.DOCKER_CONT }}
         tags: |
           ${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:latest
           ${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ github.run_number }}
