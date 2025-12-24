@@ -1,0 +1,119 @@
+# Makefile for local development flow:
+
+#   1. `make install-tools`
+#   2. `make build`
+#   2. `make build-no-cache`
+#   3. `make scan`
+#   4. `make auth`
+#   5. `make run`
+#   6. `make all`
+
+# 	Test your docker
+#   Commit and push your code to GitHub
+
+set -e
+set x
+
+SHELL := /bin/bash
+
+# AUTH
+AWS_ACCOUNT_ID := 123456789012
+AWS_ROLE_NAME := YourRoleName
+AWS_SSO_PROFILE := default
+
+# SERVICE
+SERVICE_NAME := PRODUCT_SERVICE_NAME
+SERVICE_DOCKER_PORT_MAP := 8080:8080
+SERVICE_DOCKER_ENV_FILE := .env
+SERVICE_DOCKER_FILE_PATH := Dockerfile
+SERVICE_BUILD_ARM := linux/arm64
+SERVICE_BUILD_X86 := linux/amd64
+SERVICE_BUILD_ARCH := ${SERVICE_BUILD_ARM}
+SERVICE_BUILD_IMAGE_NAME := ${SERVICE_NAME}:latest
+SERVICE_BUILD_CONTEXT_FOLDER := ./${SERVICE_NAME}
+
+# SCAN
+TRIVY_REPORT_FILE := ${SERVICE_NAME}trivy-report.txt
+TRIVY_SEVERITY := HIGH,CRITICAL
+
+
+# Macro
+define CHECK_AND_INSTALL_TOOLS
+    @echo "###### CHECKING SYSTEM TOOLS (macOS) ######"    
+    @command -v brew >/dev/null    2>&1  || (echo "## Installing brew...    ##" && /bin/bash -c "$$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)")
+    @command -v jq >/dev/null      2>&1  || (echo "## Installing jq...      ##" && brew install jq)
+    @command -v awk >/dev/null     2>&1  || (echo "## Installing gawk...    ##" && brew install gawk)
+	@command -v docker >/dev/null  2>&1  || (echo "## Installing docker...  ##" && brew install --cask docker)
+	@command -v make >/dev/null    2>&1  || (echo "## Installing make...    ##" && brew install make)
+	@command -v trivy >/dev/null   2>&1  || (echo "## Installing trivy ...  ##" && brew install trivy)
+    @command -v aws >/dev/null     2>&1  || (echo "## Installing aws...     ##" && brew install awscli)
+    @command -v aws-sso >/dev/null 2>&1  || (echo "## Installing aws-sso... ##" && brew tap syncamp/aws-sso && brew install aws-sso)
+
+	@if ! docker info >/dev/null  2>&1; then \
+        echo "## Opening Docker Desktop... ##"; \
+        open -a Docker; \
+        echo "## Waiting for Docker daemon to start (this may take a minute)... ##"; \
+        until docker info >/dev/null 2>&1; do \
+            printf "."; \
+            sleep 2; \
+        done; \
+        echo -e "\nDocker is ready!"; \
+    fi
+endef
+
+define AWS_SSO_AUTH
+    @echo "############ AWS_SSO_AUTH ############"
+    @aws sso login; export CREDS_JSON=$$(aws sso get-role-credentials --account-id $(AWS_ACCOUNT_ID) --role-name $(AWS_ROLE_NAME) --access-token $$(aws sso get-access-token --profile $(AWS_SSO_PROFILE) --output text --query 'accessToken')); \
+	export AWS_ACCESS_KEY_ID=$$(echo $$CREDS_JSON | jq -r '.roleCredentials.accessKeyId'); \
+	export AWS_SECRET_ACCESS_KEY=$$(echo $$CREDS_JSON | jq -r '.roleCredentials.secretAccessKey'); \
+	export AWS_SESSION_TOKEN=$$(echo $$CREDS_JSON | jq -r '.roleCredentials.sessionToken');
+endef
+
+define IMAGE_BUILDX
+    @echo "############ IMAGE_BUILDX ############"
+    @docker buildx create --use --name mybuilder || docker buildx use mybuilder
+    docker buildx build --platform $(SERVICE_BUILD_ARCH) -t $(SERVICE_BUILD_IMAGE_NAME) -f $(SERVICE_DOCKER_FILE_PATH) $(SERVICE_BUILD_CONTEXT_FOLDER) --load
+endef
+
+define IMAGE_BUILD_NO_CACHE
+    @echo "############ IMAGE_BUILDX_NO_CACHE ############"
+    @docker buildx create --use --name mybuilder || docker buildx use mybuilder
+    docker buildx build --platform $(SERVICE_BUILD_ARCH) --no-cache -t $(SERVICE_BUILD_IMAGE_NAME) -f $(SERVICE_DOCKER_FILE_PATH) $(SERVICE_BUILD_CONTEXT_FOLDER) --load
+endef
+
+define IMAGE_SCAN
+    @echo "############ IMAGE_SCAN ############"
+    @trivy image --format table -o $(TRIVY_REPORT_FILE) --no-progress --ignore-unfixed --severity $(TRIVY_SEVERITY) $(SERVICE_BUILD_IMAGE_NAME)
+	@echo "## Image scan python: ##" 
+	@cat $(TRIVY_REPORT_FILE) | awk '/python \python-pkg\)/,0'
+	@echo "## Image scan node: ##" 
+	@cat $(TRIVY_REPORT_FILE) | awk '/node \node-pkg\)/,0'
+	@echo "## Image scan report: $(TRIVY_REPORT_FILE) ##" 
+endef
+
+define IMAGE_RUN
+    @echo "############ IMAGE_RUN ############"
+    docker run -e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} -e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} -e AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN} -d -p $(SERVICE_DOCKER_PORT_MAP) -v ~/.aws:/root/.aws --env-file $(SERVICE_DOCKER_ENV_FILE) $(SERVICE_BUILD_IMAGE_NAME)
+endef
+
+
+# TARGETS
+.PHONY: install-tools aws-sso build build-no-cache scan run all
+
+help: ## Show this help message
+	@awk 'BEGIN {printf "\nUsage: make <target>\n\nAvailable targets:\n"} /^[a-zA-Z_-]+:.*?##/ {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@echo ""	
+	
+install-tools: ## Check and install required system tools
+	$(CHECK_AND_INSTALL_TOOLS)
+aws-sso: ## Authenticate to AWS via SSO
+	$(AWS_SSO_AUTH)
+build: ## Build Docker image using buildx
+	$(IMAGE_BUILDX)
+build-no-cache: ## Build Docker image using buildx with no cache
+	$(IMAGE_BUILD_NO_CACHE)
+scan: ## Scan Docker image for vulnerabilities using Trivy
+	$(IMAGE_SCAN)
+run: ## Run Docker image as a container
+	$(IMAGE_RUN)
+all: install-tools aws-sso build scan run ## Run all steps: install tools, AWS SSO auth, build, scan, and run
