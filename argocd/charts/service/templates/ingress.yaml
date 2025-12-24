@@ -1,0 +1,36 @@
+{{ if .Values.ingress.enabled }}
+{{- $hostname := include "service.hostname" . -}}
+{{- $certfication := include "service.certfication" . -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "service.name" . }}
+  labels:
+    {{- include "service.labels" .| nindent 4 }}
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: "{{ $hostname }}"
+    kubernetes.io/ingress.class: "alb"
+    alb.ingress.kubernetes.io/scheme: "internal"
+    alb.ingress.kubernetes.io/target-type: "ip"
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/certificate-arn: "{{ $certfication }}"
+    alb.ingress.kubernetes.io/ssl-policy: "{{ .Values.global.alb_ssl_policy }}"
+    alb.ingress.kubernetes.io/tags: "env={{ .Values.global.env }},shared_alb=true"
+    alb.ingress.kubernetes.io/loading-balancer-attributes: "access_logs.s3.enabled={{ .Values.ingress.access_logs.enabled }},access_logs.s3.bucket={{ .Values.ingress.access_logs.bucket }}
+    alb.ingress.kubernetes.io/group.name: "{{ .Values.container_name }}-{{ .Values.global.env }}-{{ .Values.global.aws.region }}"
+    {{- if .Values.service.sessionAffinity }}
+    alb.ingress.kubernetes.io/target-group-attributes: "stickiness.enabled=true,stickiness.lb_cookie.duration_seconds={{ .Values.service.sessionAffinity.timeout_seconds }}"
+    {{- end }}
+spec:
+  rules:
+  - host: {{ $hostname }}
+    http:
+      paths:
+        - backend:
+            service:
+              name: {{ include "service.name" . }}
+              port:
+                number: {{ .Values.service.port }}
+          path: /
+          pathType: Prefix
+{{- end }}

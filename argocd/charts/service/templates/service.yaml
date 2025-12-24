@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "service.name" . }}
+  labels:
+    {{- include "service.labels" .| nindent 4 }}
+  annotations:
+    abc: placeholder
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: {{.Values.container_name }}-http
+  {{- if .Values.service.sessionAffinity }}
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: {{ .Values.service.sessionAffinity.timeout_seconds }}
+  {{- end }}
+  selector:
+    {{- include "service.labels" .| nindent 4 }}

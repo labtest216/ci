@@ -1,0 +1,31 @@
+apiVersion: argo.argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: backend
+  namespace: argocd
+spec:
+  destination:
+    namespace: dev
+    server: https://kubernetes.default.svc  
+  project: default
+  source:
+    path: charts/service
+    repoURL: https://github.com/FarmersPOS/farmer-cd.git
+    targetRevision: master
+    helm:
+      valueFiles:
+        - values.yaml                                        # Default values all services
+        - ../../regions/ca-central-1/values.yaml             # Default values region  
+        - ../../regions/ca-central-1/dev/backendvalues.yaml  # Override values service
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - Validate=true
+      - ApplyOutOfSyncOnly=true
+      - Replace=true
+      - PruneLast=true
+      - Force=true
+    
